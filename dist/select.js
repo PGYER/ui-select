@@ -297,6 +297,11 @@ uis.controller('uiSelectCtrl',
 
   // When the user clicks on ui-select, displays the dropdown list
   ctrl.activate = function(initSearchValue, avoidReset) {
+    // 没有选项以及仅剩余all的时候不展开选择框
+    if (!ctrl.items.length || (ctrl.items.length == 1 && ctrl.items[0].all)) {
+        return;
+    }
+
     if (!ctrl.disabled  && !ctrl.open) {
       if(!avoidReset) _resetSearchInput();
 
@@ -340,6 +345,7 @@ uis.controller('uiSelectCtrl',
           ctrl.groups.push({name: groupName, items: [item]});
         }
       });
+
       ctrl.items = [];
       ctrl.groups.forEach(function(group) {
         ctrl.items = ctrl.items.concat(group.items);
@@ -1190,11 +1196,29 @@ uis.directive('uiSelectMultiple', ['uiSelectMinErr','$timeout', function(uiSelec
       };
 
       scope.$on('uis:select', function (event, item) {
-        if ($selectMultiple.activeMatchIndex >= 0) {
-          $select.selected.splice($selectMultiple.activeMatchIndex, 1);
-          $selectMultiple.activeMatchIndex = -1;
+
+        if (item.all) {
+            selectAll();
+        } else {
+            if ($selectMultiple.activeMatchIndex >= 0) {
+                $select.selected[$selectMultiple.activeMatchIndex] = item;
+                $selectMultiple.activeMatchIndex = -1;
+            } else {
+                $select.selected.push(item);
+            }
         }
-        $select.selected.push(item);
+
+        // 全选
+        function selectAll () {
+            // 先还原选项列表，搜索时列表会减少
+            $select.search = '';
+            $select.refreshItems();
+            angular.forEach($select.items, function(item) {
+                !item.all && $select.selected.push(item);
+            });
+            $selectMultiple.activeMatchIndex = -1;
+        }
+
         $selectMultiple.updateModel();
       });
 
